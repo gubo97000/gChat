@@ -30,6 +30,7 @@ int main() {
     struct sockaddr_in addr;
     struct hostent *inf;
     char buf[S_BUFF], ip[S_NICK];
+    char*room;
     FILE*f_add;
     conf_t conf;
 
@@ -87,8 +88,13 @@ int main() {
                     sleep(5);
                 }
             }
+            printf("In che stanza vuoi entrare?: ");
+            fgets(buf, S_BUFF, stdin);
+            room = strtok(buf, "\n");
+            write(c_sock, "Visualizer", 11);
+            read(c_sock, ip, 3);
+            write(c_sock, room, 7);
 
-            write(c_sock, "visual", S_NICK);
             printf("|gV| Connesso con server!\n");
 
             //Working
