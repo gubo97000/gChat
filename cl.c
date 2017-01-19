@@ -59,7 +59,7 @@ int main() {
                 //Ricerca host by name
                 inf = gethostbyname(conf.host);
                 if (inf == NULL) {
-                    printf("Non trovo l'host!");
+                    printf("Non trovo l'host!\n");
                     sleep(2);
                 } else break;
             }
@@ -165,7 +165,7 @@ int fconf_init() {
         printf("|gC| Scegli un nick: ");
         fgets(nick, S_NICK, stdin);
         if (nick[0] == '\n') {
-            printf("Non c'è nick!\n");
+            printf("Nick vuoto!\n");
         } else if ((pos = strchr(nick, '\n')) != NULL) {
             *pos = '\0';
             break;
