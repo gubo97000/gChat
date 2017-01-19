@@ -50,23 +50,21 @@ int main() {
         if (f_add == NULL) {
             perror("openr");
             fconf_init();
-            f_add = fopen("conf.txt", "r");
         }
 
         while (res == -1) {
+            errno = 0;
             while (1) {
-                errno = 0;
-
                 //Caricamento dati da conf.txt a struct conf
                 sconf_up(f_add, &conf);
-
+                //Ricerca host by name
                 inf = gethostbyname(conf.host);
                 if (inf == NULL) {
                     printf("Non trovo l'host!");
                     sleep(2);
                 } else break;
-
             }
+            //Stampa di host e ip host
             printf("|gC| Connessione a -%s- su ", conf.host);
             char **addrs;
             addrs = inf -> h_addr_list;
@@ -97,18 +95,17 @@ int main() {
         //Working
         while (1) {
             printf(">> ");
-            fgets(buf, sizeof (buf), stdin);
-            if (strcmp(buf, "Chiusura server!\n") == 0) {
+            fgets(buf, S_BUFF, stdin);
+            /*// !!NON FUNZIONA!!
+            if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
                 break;
-            }
-            if (strncmp(buf, "end", 3) == 0) {
+            }*/
+            if (strncmp(buf, "/end", 4) == 0) {
                 r = 0;
-
                 break;
             }
             write(c_sock, buf, 1024);
             fflush(stdin);
-
         }
 
         close(c_sock);
@@ -140,7 +137,7 @@ int fconf_init() {
     char buf[S_HOST], nick[S_NICK];
     ;
 
-    f_add = fopen("conf.txt", "w");
+    f_add = fopen("conf.txt", "w+");
     if (f_add == NULL) {
         perror("openw");
     }
@@ -181,6 +178,7 @@ int fconf_init() {
     }
     fprintf(f_add, "#insert nick in the next line(no space after':')\nnick:%s\n", nick);
     fflush(f_add);
+    rewind(f_add);
 }
 
 int sconf_up(FILE*f_add, conf_t*conf) {
@@ -208,5 +206,6 @@ int sconf_up(FILE*f_add, conf_t*conf) {
         }
 
     } while (res != 0);
+    rewind(f_add);
 }
 
