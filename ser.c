@@ -23,7 +23,7 @@ typedef struct i {
 } info;
 
 typedef struct l {
-    char adps[S_BUFF];
+    char adps[S_BUFF]; /*Admin password*/
 } conf_t;
 
 info clients[100];
@@ -42,7 +42,7 @@ int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
 
 int main() {
-    int w_sock, addr_len, res;
+    int w_sock, addr_len, res, fd=0, nread;
     struct sockaddr_in addr, w_addr;
     char buf[1024], f_buf[1024], ip[50];
     fd_set readfds, testfds;
@@ -90,21 +90,17 @@ int main() {
     FD_SET(ser_sock, &readfds);
 
     while (1) {
-        int fd;
-        int nread;
-
         testfds = readfds;
-        //getsockname(ser_sock, (struct sockaddr*) &addr, &addr_l);
-        //printf("%s\n", inet_ntoa(addr.sin_addr));
         printf("- ");
         fflush(stdout);
+        /*Start waiting*/
         res = select(FD_SETSIZE, &testfds, NULL, NULL, NULL);
         if (res < 1) {
             perror("select");
             exit(1);
         }
 
-        /*Start waiting*/
+        
 
         for (fd = 0; fd < FD_SETSIZE; fd++) {
             if (FD_ISSET(fd, &testfds)) {
