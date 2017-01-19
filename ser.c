@@ -204,7 +204,7 @@ void toall(char*buf) {
 
 void command(int fd, char * buf, chat_t pri) {
     char*cmd;
-    char old[S_NICK];
+    char old[S_NICK], sup[S_BUFF];
     int t, i = 0, r = 1;
     strtok(buf, "\n");
     cmd = strtok(buf, " ");
@@ -236,9 +236,9 @@ void command(int fd, char * buf, chat_t pri) {
     //Broadcast cmd
     if (strcmp(cmd, "/cast") == 0) {
         if (clients[fd].adm == 1) {
-            cmd = strtok(NULL, " ");
-            snprintf(buf, S_BUFF, "|%s|AVVISO: %s\n", clients[fd].nick, cmd);
-            toall(buf);
+            cmd = strtok(NULL, "\n");
+            snprintf(sup, S_BUFF, "|%s| AVVISO: %s\n", clients[fd].nick, cmd);
+            toall(sup);
         }
     }
     //Private room cmd
