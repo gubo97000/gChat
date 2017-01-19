@@ -21,8 +21,6 @@ typedef struct i {
     char nick[S_NICK];
 } conf_t;
 
-
-
 int intro();
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
@@ -50,6 +48,7 @@ int main() {
         if (f_add == NULL) {
             perror("openr");
             fconf_init();
+            f_add = fopen("conf.txt", "r");
         }
 
         while (res == -1) {
@@ -135,7 +134,6 @@ int intro() {
 int fconf_init() {
     FILE*f_add;
     char buf[S_HOST], nick[S_NICK];
-    ;
 
     f_add = fopen("conf.txt", "w+");
     if (f_add == NULL) {
@@ -178,7 +176,7 @@ int fconf_init() {
     }
     fprintf(f_add, "#insert nick in the next line(no space after':')\nnick:%s\n", nick);
     fflush(f_add);
-    rewind(f_add);
+    fclose(f_add);
 }
 
 int sconf_up(FILE*f_add, conf_t*conf) {
