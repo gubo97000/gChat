@@ -32,21 +32,23 @@ typedef struct c {
     char name[S_BUFF]; /*Private chat name*/
     int occupied; /*If the private room was closed*/
     fd_set set; /*fd_set for the chat room*/
+    fd_set tset; /*Test set*/
 } chat_t;
 
 info clients[N_CLNT];
-int ser_sock;
-conf_t conf;
 chat_t priv[N_CLNT];
-
 pthread_t thr[N_CLNT];
 
+int ser_sock;
+conf_t conf;
+struct timeval timeout;
+
 //Lettore comandi /cmd
-void command(int fd, char * buf, chat_t pri);
+void command(int fd, char * buf, chat_t* pri);
 //Send buf to all fd from 4 and print
 void toall(char*buf);
 //Send buf to all fd in fd_set
-void toroom(char*buf, chat_t pri);
+void toroom(char*buf, chat_t * pri);
 //Handler SIGINT
 void hand_c();
 //Initialize file ser_conf.txt
@@ -54,21 +56,23 @@ int fconf_init();
 //Read ser_conf.txt save data in struct conf_t
 int sconf_up(FILE*f_add, conf_t*conf);
 //Move from a set to another
-int fd_move(int fd, fd_set src, fd_set dst);
-//
+int fd_move(int fd, chat_t* src, chat_t* dst);
+//Function for thread (Private room)
 void*priv_room(void*room);
-//
-int set_vis(int fd, chat_t pri);
+//Set room for visualizer
+int set_vis(int fd, chat_t* pri);
 
 int main() {
     int w_sock, addr_len, res, fd = 0, nread;
     struct sockaddr_in addr, w_addr;
     char buf[1024], f_buf[1024];
-    fd_set readfds, testfds;
+
     FILE*f_add;
-    //Primo indice
+    timeout.tv_sec = 2;
+    timeout.tv_usec = 2;
+    //Inizializzazione priv[0]
     strcpy(priv[0].name, "piazza");
-    priv[0].set = readfds;
+    priv[0].set;
     priv[0].occupied = 1;
 
     ser_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -109,37 +113,44 @@ int main() {
     //Gestione segnale SIGINT
     signal(SIGINT, hand_c);
 
-    FD_ZERO(&readfds);
-    FD_SET(ser_sock, &readfds);
+    FD_ZERO(&priv[0].set);
+    FD_SET(ser_sock, &priv[0].set);
 
+    //Work
     while (1) {
-        testfds = readfds;
         printf("- ");
         fflush(stdout);
-
+        FD_SET(ser_sock, &priv[0].set);
         /*Start waiting*/
-        res = select(FD_SETSIZE, &testfds, NULL, NULL, NULL);
-        if (res < 1) {
-            perror("select");
-            exit(1);
-        }
+        do {
+            FD_ZERO(&priv[0].tset);
+            priv[0].tset = priv[0].set;
+            res = select(FD_SETSIZE, &(priv[0].tset), NULL, NULL, &timeout);
+            if (res == -1) {
+                perror("select");
+                fflush(stdout);
+                exit(1);
+            }
+            timeout.tv_sec = 1;
+            timeout.tv_usec = 2;
+        } while (res == 0);
 
         for (fd = 0; fd < FD_SETSIZE; fd++) {
-            if (FD_ISSET(fd, &testfds)) {
+            if (FD_ISSET(fd, &(priv[0].tset))) {
 
                 /*  Aggiunta client  */
                 if (fd == ser_sock) {
                     addr_len = sizeof (w_addr);
                     w_sock = accept(ser_sock, (struct sockaddr *) &w_addr, &addr_len);
-                    FD_SET(w_sock, &readfds);
+                    FD_SET(w_sock, &priv[0].set);
                     read(w_sock, clients[w_sock].nick, 30);
                     //Visualizer
                     if ((strcmp(clients[w_sock].nick, "Visualizer")) == 0) {
-                        set_vis(w_sock, priv[0]);
+                        set_vis(w_sock, &priv[0]);
                     } else {
                         clients[w_sock].adm = 0;
                         snprintf(buf, S_BUFF, "|%s| è entrato\n", clients[w_sock].nick);
-                        toroom(buf, priv[0]);
+                        toroom(buf, &priv[0]);
                     }
 
                 }/* Client action */
@@ -149,19 +160,22 @@ int main() {
                     /* Rimozione client  */
                     if (nread == 0) {
                         close(fd);
-                        FD_CLR(fd, &readfds);
-                        snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
-                        toroom(buf, priv[0]);
+                        FD_CLR(fd, &priv[0].set);
+                        //Visualizer
+                        if ((strcmp(clients[fd].nick, "Visualizer")) != 0) {
+                            snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
+                            toroom(buf, &priv[0]);
+                        }
                     }/*Client sent something*/
                     else {
                         read(fd, f_buf, sizeof (f_buf));
                         //Commad
                         if (f_buf[0] == '/') {
-                            command(fd, f_buf, priv[0]);
+                            command(fd, f_buf, &priv[0]);
                         }//Plain text 
                         else {
                             snprintf(buf, sizeof (buf), "|%s| %s", clients[fd].nick, f_buf);
-                            toroom(buf, priv[0]);
+                            toroom(buf, &priv[0]);
                         }
                         buf[0] = '\0';
                         f_buf[0] = '\0';
@@ -175,12 +189,12 @@ int main() {
     close(ser_sock);
 }
 
-void toroom(char*buf, chat_t pri) {
+void toroom(char*buf, chat_t* pri) {
     int i = 4, r = 0;
 
-    dprintf(1, "%s, %s", pri.name, buf);
+    dprintf(1, "%s, %s", pri->name, buf);
     while (i < FD_SETSIZE) {
-        r = FD_ISSET(i, &pri.set);
+        r = FD_ISSET(i, &pri->set);
         if (i != 2 && i != ser_sock && r != 0) {
             write(i, buf, S_BUFF);
         }
@@ -202,7 +216,7 @@ void toall(char*buf) {
     buf[0] = '\0';
 }
 
-void command(int fd, char * buf, chat_t pri) {
+void command(int fd, char * buf, chat_t *pri) {
     char*cmd;
     char old[S_NICK], sup[S_BUFF];
     int t, i = 0, r = 1;
@@ -248,7 +262,7 @@ void command(int fd, char * buf, chat_t pri) {
         for (i = 0; i < N_CLNT; i++) {
             t = strcmp(cmd, priv[i].name);
             if (t == 0) {
-                fd_move(fd, pri.set, priv[i].set);
+                fd_move(fd, pri, &priv[i]);
                 r = 0;
                 snprintf(buf, S_BUFF, "|%s| entrato in %s \n", clients[fd].nick, priv[i].name);
                 toroom(buf, pri);
@@ -261,7 +275,8 @@ void command(int fd, char * buf, chat_t pri) {
                 if (priv[i].occupied == 0) {
                     priv[i].occupied = 1;
                     strcpy(priv[i].name, cmd);
-                    fd_move(fd, pri.set, priv[i].set);
+                    FD_ZERO(&pri->set);
+                    fd_move(fd, pri, &priv[i]);
                     pthread_create(&thr[i], NULL, priv_room, (void*) &priv[i]);
                     break;
                 }
@@ -278,7 +293,6 @@ void command(int fd, char * buf, chat_t pri) {
 }
 
 void hand_c() {
-
     char buf[S_BUFF];
     strcpy(buf, "Chiusura server!\n");
     toall(buf);
@@ -328,12 +342,14 @@ int sconf_up(FILE*f_add, conf_t*conf) {
     }
 }
 
-int fd_move(int fd, fd_set src, fd_set dst) {
-    FD_SET(fd, &dst);
-    FD_CLR(fd, &src);
+int fd_move(int fd, chat_t* src, chat_t* dst) {
+    FD_SET(fd, &(dst->set));
+    FD_SET(fd, &(dst->tset));
+    FD_CLR(fd, &(src->set));
+    FD_CLR(fd, &(src->tset));
 }
 
-int set_vis(int fd, chat_t pri) {
+int set_vis(int fd, chat_t* pri) {
     char buf[S_BUFF];
     int t = 0, i = 0;
     write(fd, "ok", 3);
@@ -342,33 +358,42 @@ int set_vis(int fd, chat_t pri) {
     for (i = 0; i < N_CLNT; i++) {
         t = strcmp(buf, priv[i].name);
         if (t == 0) {
-            fd_move(fd, pri.set, priv[i].set);
+            fd_move(fd, pri, &priv[i]);
             break;
         }
     }
 }
 
 void*priv_room(void*room) {
-    chat_t pri = *(chat_t*) room;
-    fd_set readfds = pri.set;
-    fd_set testfds;
-    int fd, nread;
+    chat_t* pri = (chat_t*) room;
+    timeout.tv_sec = 1;
+
+    int fd, nread, res;
     char buf[S_BUFF], f_buf[S_BUFF];
 
     while (1) {
-        testfds = readfds;
-        printf("!%s! ",pri.name);
+        FD_ZERO(&(pri->tset));
+
+        printf("!%s! ", pri->name);
         fflush(stdout);
 
         /*Start waiting*/
-        int res = select(FD_SETSIZE, &testfds, NULL, NULL, NULL);
-        if (res < 1) {
-            perror("select");
-            exit(1);
-        }
+        do {
+            FD_ZERO(&pri->tset);
+            pri->tset = pri->set;
+            res = select(FD_SETSIZE, &(pri->tset), NULL, NULL, &timeout);
+            if (res == -1) {
+                perror("select");
+                fflush(stdout);
+                exit(1);
+            }
+            timeout.tv_sec = 1;
+            timeout.tv_usec = 2;
+        } while (res == 0);
 
         for (fd = 0; fd < FD_SETSIZE; fd++) {
-            if (FD_ISSET(fd, &testfds)) {
+
+            if (FD_ISSET(fd, &(pri->tset))) {
 
                 /* Client action */
                 ioctl(fd, FIONREAD, &nread);
@@ -376,7 +401,7 @@ void*priv_room(void*room) {
                 /* Rimozione client  */
                 if (nread == 0) {
                     close(fd);
-                    FD_CLR(fd, &readfds);
+                    FD_CLR(fd, &(pri->set));
                     snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
                     toroom(buf, pri);
                 }/*Client sent something*/
