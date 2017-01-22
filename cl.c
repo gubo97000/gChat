@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdio_ext.h>
 #include <sys/types.h>
@@ -24,16 +26,23 @@ typedef struct i {
     char nick[S_NICK];
 } conf_t;
 
-int intro();
+/*/
+typedef struct t {
+    pthread_t thr;
+    int busy;
+} fl_thr;*/
+
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
 int is_empty(const char *s);
 void*thread_check(void*c_sock);
+int check(char buf[S_BUFF]);
 
-int l= 1;
+int l = 1;
+//fl_thr thr[3];
 
 int main() {
-    int c_sock, res = -1, r = 1;
+    int c_sock, res = -1, r = 1, c = 0;
     struct sockaddr_in addr;
     struct hostent *inf;
     char buf[1024], ip[50];
@@ -41,11 +50,9 @@ int main() {
     conf_t conf;
     pthread_t t1;
 
-    pthread_create(&t1, NULL, thread_check, (void*) &c_sock);
-
     while (r) {
         printf(">> gChat Client <<\n");
-
+        l = 1;
         //Creazione socket
         c_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (c_sock == -1) {
@@ -101,47 +108,37 @@ int main() {
         write(c_sock, conf.nick, S_NICK);
         printf("|gC| Connesso con server!\n");
 
+        /*Creating fd for non blocking read
+        val = fcntl(c_sock, F_GETFL, 0);
+        fcntl(c_sock, F_SETFL, val | O_NONBLOCK);*/
+        pthread_create(&t1, NULL, thread_check, (void*) &c_sock);
         //Working
         while (l) {
+            /* if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
+                 break;
+             }*/
+            c = 0;
             printf(">> ");
             fgets(buf, S_BUFF, stdin);
-
-            /*// !!NON FUNZIONA!!
-            if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
-                break;
-            }*/
-
+            if (strncmp(buf, "/", 1) == 0) {
+                if (check(buf) != -1) {
+                    c = 1;
+                }
+            }
             if (strncmp(buf, "/end", 4) == 0) {
                 r = 0;
                 break;
             }
-            if (!is_empty(buf)) write(c_sock, buf, 1024);
+            //if(strncmp(buf, "/flup", 5) == 0){}
+            if (!is_empty(buf) && l == 1 && c == 1)
+                write(c_sock, buf, 1024);
             fflush(stdin);
         }
-        close(c_sock);
+
         printf("|gC| Disconnesso dal server\n");
     }
+    close(c_sock);
     pthread_cancel(t1);
-}
-
-int intro() {
-    char input[256];
-    printf("|gC| 0) Piazza\n");
-    printf("|gC| 1) Connessione privata\n");
-    printf("> ");
-    while (1) {
-        scanf("%s", input);
-
-        if (strcmp(input, "0") == 0)
-            intro();
-        else if (strcmp(input, "1") == 0)
-            intro();
-        else if (strcmp(input, "3") == 0)
-            intro();
-
-        else
-            printf("Allowed commands: 0, 1, 3.\n");
-    }
 }
 
 int fconf_init() {
@@ -177,7 +174,7 @@ int fconf_init() {
         char *pos;
         printf("|gC| Scegli un nick: ");
         fgets(nick, S_NICK, stdin);
-        if (nick[0] == '\n'|| is_empty(nick)==1) {
+        if (nick[0] == '\n' || is_empty(nick) == 1) {
             printf("Nick vuoto!\n");
         } else if ((pos = strchr(nick, '\n')) != NULL) {
             *pos = '\0';
@@ -222,7 +219,7 @@ int sconf_up(FILE*f_add, conf_t*conf) {
 
 int is_empty(const char *s) {
     while (*s != '\n') {
-        if (!isspace(*s))
+        if (isspace(*s) == 0)
             return 0;
         s++;
     }
@@ -231,9 +228,37 @@ int is_empty(const char *s) {
 
 void*thread_check(void*c_sock) {
     char buf[S_BUFF];
-    read(*(int*) c_sock, buf, S_BUFF);
-    if (strcmp(buf, "Chiusura server!\n") == 0) {
-        printf("%s", buf);
-        l = 0;
+    while (1) {
+        read(*(int*) c_sock, buf, S_BUFF);
+        if (strcmp(buf, "Chiusura server!\n") == 0) {
+            printf("%s", buf);
+            l = 0;
+            buf[0] = '\0';
+            raise(SIGIOT);
+            pthread_yield();
+        }
     }
+}
+
+//void*thread_file(void*buf){}
+
+int check(char* chk) {
+    char buf[S_BUFF];
+    strcpy(buf, chk);
+    chk = strtok(buf, " ");
+    chk = strtok(NULL, " ");
+    if (chk == NULL) {
+        return -1;
+    }
+    if (is_empty(chk) == 1) {
+        return -1;
+    }
+    chk = strtok(NULL, "\n");
+    if (chk == NULL) {
+        return -1;
+    }
+    if (is_empty(chk) == 1) {
+        return -1;
+    }
+    return 0;
 }

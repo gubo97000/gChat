@@ -386,10 +386,13 @@ void*priv_room(void*room) {
 
                 /* Rimozione client  */
                 if (nread == 0) {
+                    if ((strcmp(clients[fd].nick, "Visualizer")) != 0) {
+                        snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
+                        toroom(buf, pri);
+                    }
                     close(fd);
                     FD_CLR(fd, &(pri->set));
-                    snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
-                    toroom(buf, pri);
+
                 }/*Client sent something*/
                 else {
                     read(fd, f_buf, sizeof (f_buf));

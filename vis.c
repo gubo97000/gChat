@@ -25,7 +25,7 @@ typedef struct i {
 int intro();
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
-int is_empty(char *s);
+int is_empty(const char *s);
 
 int main() {
     int c_sock, res = -1, m = 0;
@@ -49,14 +49,14 @@ int main() {
 
         //Input room and check 
         while (1) {
-            printf("In che stanza vuoi entrare?: ");
+            printf("|gV| In che stanza vuoi entrare?: ");
             fgets(buf, S_BUFF, stdin);
             res = is_empty(buf);
             if (res != 1) {
                 break;
             } else {
                 strcpy(buf, "plaza\n");
-                printf("Default\n");
+                printf("|gV| Entering default room\n");
                 break;
             }
         }
@@ -125,7 +125,7 @@ int main() {
                 perror("write");
             }
             //Invio nome room
-            printf("|gV| Ask for room '%s' \n", buf);
+            printf("|gV| Ask for room: %s", buf);
             res = write(c_sock, buf, S_BUFF);
             if (res == -1) {
                 perror("write");
@@ -161,26 +161,6 @@ int main() {
     }
 
     close(c_sock);
-}
-
-int intro() {
-    char input[256];
-    printf("|gC| 0) Piazza\n");
-    printf("|gC| 1) Connessione privata\n");
-    printf("> ");
-    while (1) {
-        scanf("%s", input);
-
-        if (strcmp(input, "0") == 0)
-            intro();
-        else if (strcmp(input, "1") == 0)
-            intro();
-        else if (strcmp(input, "3") == 0)
-            intro();
-
-        else
-            printf("Allowed commands: 0, 1, 3.\n");
-    }
 }
 
 int fconf_init() {
@@ -261,16 +241,23 @@ int sconf_up(FILE*f_add, conf_t * conf) {
     } while (res != 0);
     rewind(f_add);
 }
-
+/*
 int is_empty(char *s) {
     int res = 0, i = 0;
     char buf[S_BUFF];
     strcpy(buf, s);
     while (buf[i] != '\0') {
-
-        if (buf[i] == ' ' || buf[i] == '\n')
+        if (buf[i] == ' ' || buf[i] == '\n'|| buf[i] == '   ')
             i++;
         else return 0;
+    }
+    return 1;
+}*/
+int is_empty(const char *s) {
+    while (*s != '\n') {
+        if (isspace(*s)==0)
+            return 0;
+        s++;
     }
     return 1;
 }
