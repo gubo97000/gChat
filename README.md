@@ -59,8 +59,11 @@ The output is formatted this way: nameofroom, |nick| message
 
 #Compile it!
 Compile by using
-'gcc -D_REENTRANT -g ser.c -o ser -lpthread'
+```
+gcc -D_REENTRANT -g ser.c -o ser -lpthread
 
-'gcc -D_REENTRANT -g vis.c -o vis -lpthread'
+gcc -D_REENTRANT -g vis.c -o vis -lpthread
 
-'gcc -D_REENTRANT -g cl.c -o cl -lpthread'
+gcc -D_REENTRANT -g cl.c -o cl -lpthread
+
+```
