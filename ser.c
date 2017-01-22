@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <pthread.h>
+#include <ctype.h>
 
 #define S_NICK 11
 #define S_HOST 20
@@ -71,7 +72,7 @@ int main() {
     timeout.tv_sec = 2;
     timeout.tv_usec = 2;
     //Inizializzazione priv[0]
-    strcpy(priv[0].name, "piazza");
+    strcpy(priv[0].name, "Hall");
     priv[0].set;
     priv[0].occupied = 1;
 
@@ -96,7 +97,6 @@ int main() {
     addr.sin_port = htons(9734);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr_len = sizeof (w_addr);
-    //int addr_l = sizeof (addr);
 
     res = bind(ser_sock, (struct sockaddr*) &addr, sizeof (addr));
     if (res == -1) {
@@ -113,14 +113,14 @@ int main() {
     //Gestione segnale SIGINT
     signal(SIGINT, hand_c);
 
-    FD_ZERO(&priv[0].set);
-    FD_SET(ser_sock, &priv[0].set);
-
     //Work
     while (1) {
         printf("- ");
         fflush(stdout);
+
+        FD_ZERO(&priv[0].set);
         FD_SET(ser_sock, &priv[0].set);
+
         /*Start waiting*/
         do {
             FD_ZERO(&priv[0].tset);
@@ -134,54 +134,36 @@ int main() {
             timeout.tv_sec = 1;
             timeout.tv_usec = 2;
         } while (res == 0);
-
+        /*Something happend*/
         for (fd = 0; fd < FD_SETSIZE; fd++) {
             if (FD_ISSET(fd, &(priv[0].tset))) {
-
                 /*  Aggiunta client  */
                 if (fd == ser_sock) {
                     addr_len = sizeof (w_addr);
                     w_sock = accept(ser_sock, (struct sockaddr *) &w_addr, &addr_len);
+
                     FD_SET(w_sock, &priv[0].set);
-                    read(w_sock, clients[w_sock].nick, 30);
+
+                    read(w_sock, clients[w_sock].nick, S_NICK);
+                    clients[w_sock].adm = 0;
+
                     //Visualizer
                     if ((strcmp(clients[w_sock].nick, "Visualizer")) == 0) {
-                        set_vis(w_sock, &priv[0]);
-                    } else {
-                        clients[w_sock].adm = 0;
-                        snprintf(buf, S_BUFF, "|%s| è entrato\n", clients[w_sock].nick);
-                        toroom(buf, &priv[0]);
+                        if (set_vis(w_sock, &priv[0]) == -1) {
+                            write(w_sock, "Room not found!\n", S_BUFF);
+                        } else {
+                            write(w_sock, "Room found!\n", S_BUFF);
+                        }
+                    } /*Input client*/ else {
+                        /*snprintf(buf, S_BUFF, "|%s| \n", clients[w_sock].nick);
+                        toroom(buf, &priv[0]);*/
+                        strcpy(buf, "/prch plaza\n");
+                        command(w_sock, buf, &priv[0]);
+
                     }
 
-                }/* Client action */
-                else {
-                    ioctl(fd, FIONREAD, &nread);
-
-                    /* Rimozione client  */
-                    if (nread == 0) {
-                        close(fd);
-                        FD_CLR(fd, &priv[0].set);
-                        //Visualizer
-                        if ((strcmp(clients[fd].nick, "Visualizer")) != 0) {
-                            snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
-                            toroom(buf, &priv[0]);
-                        }
-                    }/*Client sent something*/
-                    else {
-                        read(fd, f_buf, sizeof (f_buf));
-                        //Commad
-                        if (f_buf[0] == '/') {
-                            command(fd, f_buf, &priv[0]);
-                        }//Plain text 
-                        else {
-                            snprintf(buf, sizeof (buf), "|%s| %s", clients[fd].nick, f_buf);
-                            toroom(buf, &priv[0]);
-                        }
-                        buf[0] = '\0';
-                        f_buf[0] = '\0';
-
-                    }
                 }
+
             }
         }
     }
@@ -275,15 +257,16 @@ void command(int fd, char * buf, chat_t *pri) {
                 if (priv[i].occupied == 0) {
                     priv[i].occupied = 1;
                     strcpy(priv[i].name, cmd);
-                    FD_ZERO(&pri->set);
+                    FD_ZERO(&priv[i].set);
                     fd_move(fd, pri, &priv[i]);
                     pthread_create(&thr[i], NULL, priv_room, (void*) &priv[i]);
-                    break;
+                    snprintf(buf, S_BUFF, "|%s| ha creato ed è in %s \n", clients[fd].nick, priv[i].name);
+                    toroom(buf, pri);
+                    return;
                 }
             }
-            snprintf(buf, S_BUFF, "|%s| ha creato ed è in %s \n", clients[fd].nick, priv[i].name);
+            snprintf(buf, S_BUFF, "Tutto occupato!\n");
             toroom(buf, pri);
-
         }
 
     } else {/*Wrong cmd*/
@@ -350,18 +333,21 @@ int fd_move(int fd, chat_t* src, chat_t* dst) {
 }
 
 int set_vis(int fd, chat_t* pri) {
+    char*pos;
     char buf[S_BUFF];
     int t = 0, i = 0;
-    write(fd, "ok", 3);
     read(fd, buf, S_BUFF);
+    pos = strtok(buf, "\n");
+
     //Check if room exist
     for (i = 0; i < N_CLNT; i++) {
-        t = strcmp(buf, priv[i].name);
+        t = strcmp(pos, priv[i].name);
         if (t == 0) {
             fd_move(fd, pri, &priv[i]);
-            break;
+            return 0;
         }
     }
+    return -1;
 }
 
 void*priv_room(void*room) {

@@ -11,6 +11,9 @@
 #include <string.h>
 #include <netdb.h>
 #include <errno.h>
+#include <ctype.h>
+#include <pthread.h>
+#include <signal.h>
 
 #define S_BUFF 1024
 #define S_NICK 11
@@ -24,14 +27,21 @@ typedef struct i {
 int intro();
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
+int is_empty(const char *s);
+void*thread_check(void*c_sock);
+
+int l= 1;
 
 int main() {
-    int c_sock, res = -1, r = 1, fd = 0;
+    int c_sock, res = -1, r = 1;
     struct sockaddr_in addr;
     struct hostent *inf;
     char buf[1024], ip[50];
     FILE*f_add;
     conf_t conf;
+    pthread_t t1;
+
+    pthread_create(&t1, NULL, thread_check, (void*) &c_sock);
 
     while (r) {
         printf(">> gChat Client <<\n");
@@ -50,7 +60,7 @@ int main() {
             fconf_init();
             f_add = fopen("conf.txt", "r");
         }
-
+        //Caricamento conf.txt e ricerca host
         while (res == -1) {
             errno = 0;
             while (1) {
@@ -92,23 +102,26 @@ int main() {
         printf("|gC| Connesso con server!\n");
 
         //Working
-        while (1) {
+        while (l) {
             printf(">> ");
             fgets(buf, S_BUFF, stdin);
+
             /*// !!NON FUNZIONA!!
             if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
                 break;
             }*/
+
             if (strncmp(buf, "/end", 4) == 0) {
                 r = 0;
                 break;
             }
-            write(c_sock, buf, 1024);
+            if (!is_empty(buf)) write(c_sock, buf, 1024);
             fflush(stdin);
         }
-
         close(c_sock);
+        printf("|gC| Disconnesso dal server\n");
     }
+    pthread_cancel(t1);
 }
 
 int intro() {
@@ -164,7 +177,7 @@ int fconf_init() {
         char *pos;
         printf("|gC| Scegli un nick: ");
         fgets(nick, S_NICK, stdin);
-        if (nick[0] == '\n') {
+        if (nick[0] == '\n'|| is_empty(nick)==1) {
             printf("Nick vuoto!\n");
         } else if ((pos = strchr(nick, '\n')) != NULL) {
             *pos = '\0';
@@ -207,3 +220,20 @@ int sconf_up(FILE*f_add, conf_t*conf) {
     rewind(f_add);
 }
 
+int is_empty(const char *s) {
+    while (*s != '\n') {
+        if (!isspace(*s))
+            return 0;
+        s++;
+    }
+    return 1;
+}
+
+void*thread_check(void*c_sock) {
+    char buf[S_BUFF];
+    read(*(int*) c_sock, buf, S_BUFF);
+    if (strcmp(buf, "Chiusura server!\n") == 0) {
+        printf("%s", buf);
+        l = 0;
+    }
+}

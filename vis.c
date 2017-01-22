@@ -11,6 +11,7 @@
 #include <string.h>
 #include <netdb.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define S_BUFF 1024
 #define S_NICK 11
@@ -24,12 +25,13 @@ typedef struct i {
 int intro();
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
+int is_empty(char *s);
 
 int main() {
-    int c_sock, res = -1, r = 1;
+    int c_sock, res = -1, m = 0;
     struct sockaddr_in addr;
     struct hostent *inf;
-    char buf[S_BUFF], ip[S_NICK];
+    char buf[S_BUFF], sup[S_BUFF];
     char*room;
     FILE*f_add;
     conf_t conf;
@@ -37,6 +39,29 @@ int main() {
     while (1) {
         buf[0] = '\0';
         printf(">> gChat Visualizer <<\n");
+
+        //Apertura conf.txt o creazione se non esiste
+        f_add = fopen("conf.txt", "r");
+        if (f_add == NULL) {
+            perror("openr");
+            fconf_init();
+        }
+
+        //Input room and check 
+        while (1) {
+            printf("In che stanza vuoi entrare?: ");
+            fgets(buf, S_BUFF, stdin);
+            res = is_empty(buf);
+            if (res != 1) {
+                break;
+            } else {
+                strcpy(buf, "plaza\n");
+                printf("Default\n");
+                break;
+            }
+        }
+
+        //Open conf.txt e connessione
         while (1) {
             //Creazione socket
             c_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,15 +70,9 @@ int main() {
                 exit(EXIT_FAILURE);
             }
 
-            //Apertura conf.txt o creazione se non esiste
-            f_add = fopen("conf.txt", "r");
-            if (f_add == NULL) {
-                perror("openr");
-                fconf_init();
-            }
-
-            while (res == -1) {
-                errno = 0;
+            //Connessione al server
+            while (1) {
+                //Caricamento conf e check host
                 while (1) {
                     //Caricamento dati da conf.txt a struct conf
                     sconf_up(f_add, &conf);
@@ -62,10 +81,13 @@ int main() {
                     if (inf == NULL) {
                         printf("Non trovo l'host!");
                         sleep(2);
-                    } else break;
+                    } else {
+                        break;
+                    }
                 }
+
                 //Stampa di host e ip host
-                printf("|gC| Connessione a -%s- su ", conf.host);
+                printf("|gV| Connessione a -%s- su ", conf.host);
                 char **addrs;
                 addrs = inf -> h_addr_list;
                 while (*addrs) {
@@ -77,39 +99,68 @@ int main() {
                 //Indirizzo server
                 addr.sin_family = AF_INET;
                 addr.sin_port = htons(9734);
-                addr.sin_addr/*.s_addr*/ = /*inet_addr("127.0.0.1");*/
-                        *(struct in_addr*) *inf->h_addr_list;
+                addr.sin_addr = *(struct in_addr*) *inf->h_addr_list;
 
                 //Connessione
                 res = connect(c_sock, (struct sockaddr*) &addr, sizeof (addr));
                 if (res == -1) {
                     perror("|gC| Conn");
                     printf("|gC| Riprovo a connettermi in 5 sec!\n");
+                    errno = 0;
                     sleep(5);
-                }
-            }
-            printf("In che stanza vuoi entrare?: ");
-            fgets(buf, S_BUFF, stdin);
-            room = strtok(buf, "\n");
-            write(c_sock, "Visualizer", 11);
-            read(c_sock, ip, 3);
-            write(c_sock, room, 7);
-
-            printf("|gV| Connesso con server!\n");
-
-            //Working
-            while (1) {
-                fflush(stdin);
-                read(c_sock, buf, 1024);
-                if (strcmp(buf, "Chiusura server!\n") == 0) {
+                } else {
+                    printf("|gV| Connesso con server!\n");
                     break;
                 }
+            }
+            fclose(f_add);
+
+
+            strcpy(conf.nick, "Visualizer");
+
+            //Riconoscimento stanza
+            //printf("|gV| Hello... ");
+            res = write(c_sock, conf.nick, S_NICK);
+            if (res == -1) {
+                perror("write");
+            }
+            //Invio nome room
+            printf("|gV| Ask for room '%s' \n", buf);
+            res = write(c_sock, buf, S_BUFF);
+            if (res == -1) {
+                perror("write");
+            }
+            printf("|gV| Il server dice: ");
+            //Risposta server
+            res = read(c_sock, buf, S_BUFF);
+            if (res == -1) {
+                perror("read");
+            }
+
+            if (strcmp(buf, "Room not found!\n") != 0) {
                 printf("%s", buf);
-                fflush(stdout);
+                break;
+            } else {
+                printf("%s", buf);
+                exit(EXIT_FAILURE);
             }
         }
-        close(c_sock);
+        printf("|gV| Connesso alla stanza!\n");
+        fflush(stdout);
+
+        //Working
+        while (1) {
+            buf[0] = '\0';
+            read(c_sock, buf, 1024);
+            if (strcmp(buf, "Chiusura server!\n") == 0) {
+                break;
+            }
+            printf("%s", buf);
+            fflush(stdout);
+        }
     }
+
+    close(c_sock);
 }
 
 int intro() {
@@ -154,34 +205,36 @@ int fconf_init() {
             *pos = '\0';
             break;
         } else {
+
             __fpurge(stdin);
             printf("Nome host troppo grande!\n");
         }
     }
     fprintf(f_add, "#insert host in the next line(no space after':')\nhost:%s\n", buf);
     fflush(f_add);
-
-    //Scelta nick, controllo lunghezza/eliminazione '\n'
-    while (1) {
-        char *pos;
-        printf("|gC| Scegli un nick: ");
-        fgets(nick, S_NICK, stdin);
-        if (nick[0] == '\n') {
-            printf("Non c'è nick!\n");
-        } else if ((pos = strchr(nick, '\n')) != NULL) {
-            *pos = '\0';
-            break;
-        } else {
-            __fpurge(stdin);
-            printf("Il nick è troppo grande!\n");
+    /*
+        //Scelta nick, controllo lunghezza/eliminazione '\n'
+        while (1) {
+            char *pos;
+            printf("|gC| Scegli un nick: ");
+            fgets(nick, S_NICK, stdin);
+            if (nick[0] == '\n') {
+                printf("Non c'è nick!\n");
+            } else if ((pos = strchr(nick, '\n')) != NULL) {
+     *pos = '\0';
+                break;
+            } else {
+                __fpurge(stdin);
+                printf("Il nick è troppo grande!\n");
+            }
         }
-    }
-    fprintf(f_add, "#insert nick in the next line(no space after':')\nnick:%s\n", nick);
+        fprintf(f_add, "#insert nick in the next line(no space after':')\nnick:%s\n", nick);
+     */
     fflush(f_add);
     rewind(f_add);
 }
 
-int sconf_up(FILE*f_add, conf_t*conf) {
+int sconf_up(FILE*f_add, conf_t * conf) {
     char*pos, *res;
     char buf[S_BUFF];
     int check[2] = {0};
@@ -209,6 +262,16 @@ int sconf_up(FILE*f_add, conf_t*conf) {
     rewind(f_add);
 }
 
+int is_empty(char *s) {
+    int res = 0, i = 0;
+    char buf[S_BUFF];
+    strcpy(buf, s);
+    while (buf[i] != '\0') {
 
-
+        if (buf[i] == ' ' || buf[i] == '\n')
+            i++;
+        else return 0;
+    }
+    return 1;
+}
 
