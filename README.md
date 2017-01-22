@@ -10,17 +10,17 @@ The software is composed by three different files:
 3. The server (ser.c)
 
 
-1 - The client
+##1 - The client
 
 This is like an input box for the chat, you won't see any output here.
 
-1.1 - conf.txt
+###1.1 - conf.txt
 
 The first time is executed the client will crete a file conf.txt and ask you to compile the host and nickname field.
 Conf.txt can be modified inside the folder of execution.
 
-1.2 - Commands
-
+###1.2 - Commands
+###
 You have some useful services that the client can ask to the server (don't write the []):
 
 /admn [password]
@@ -40,14 +40,14 @@ You will enter or create a private room, for now every one can access the room i
 
 You will be able to change your nick in the server, is only a temporary change, the default nick can be changed in the conf.txt file
 
-2 - The Visualizer
+##2 - The Visualizer
 
 The visualizer work with the same conf.txt file of the client so be sure tu put the in the same folder.
 
 You will be asked to enter a room, leave blank or "plaza" and you will enter the default room of the server.
 The room must be created from the client before be entered.
 
-3 - The server
+##3 - The server
 The server do everything by itself, the first time is executed it will create the file ser_conf.txt where you can put the password for admin,
 after it will start on port 9734;
 
