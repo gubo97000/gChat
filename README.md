@@ -55,11 +55,11 @@ The room must be created from the client before be entered.
 The server do everything by itself, the first time is executed it will create the file ser_conf.txt where you can put the password for admin,
 after it will start on port 9734;
 
-The "-" means that the "Hall" is waiting some client to join and be dispatched in some room.
+The `-` means that the "Hall" is waiting some client to join and be dispatched in some room.
 
-The !name of room! mean the room is waiting for an input
+The `!name of room!` mean the room is waiting for an input
 
-The output is formatted this way: nameofroom, |nick| message
+The output is formatted this way: `nameofroom, |nick| message`
 
 #Compile it!
 Compile by using
