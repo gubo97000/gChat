@@ -22,7 +22,6 @@ typedef struct i {
     char nick[S_NICK];
 } conf_t;
 
-int intro();
 int fconf_init();
 int sconf_up(FILE*f_add, conf_t*conf);
 int is_empty(const char *s);
@@ -261,4 +260,3 @@ int is_empty(const char *s) {
     }
     return 1;
 }
-

@@ -26,23 +26,21 @@ typedef struct i {
     char nick[S_NICK];
 } conf_t;
 
-/*/
-typedef struct t {
-    pthread_t thr;
-    int busy;
-} fl_thr;*/
-
+//File conf.txt initialize 
 int fconf_init();
+//Load conf.txt
 int sconf_up(FILE*f_add, conf_t*conf);
+//Check if string is empty 
 int is_empty(const char *s);
+//Check if server closed
 void*thread_check(void*c_sock);
+//Check if a command is empty
 int check(char buf[S_BUFF]);
 
-int l = 1;
-//fl_thr thr[3];
+int connected = 1;
 
 int main() {
-    int c_sock, res = -1, r = 1, c = 0;
+    int c_sock, res = -1, r = 1, not_empty = 0;
     struct sockaddr_in addr;
     struct hostent *inf;
     char buf[1024], ip[50];
@@ -52,22 +50,24 @@ int main() {
 
     while (r) {
         printf(">> gChat Client <<\n");
-        l = 1;
-        //Creazione socket
+        connected = 1;
+
+        //Create socket
         c_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (c_sock == -1) {
             perror("|gC| Err");
             exit(EXIT_FAILURE);
         }
 
-        //Apertura conf.txt o creazione se non esiste
+        //Open conf.txt o creazione se non esiste
         f_add = fopen("conf.txt", "r");
         if (f_add == NULL) {
             perror("openr");
             fconf_init();
             f_add = fopen("conf.txt", "r");
         }
-        //Caricamento conf.txt e ricerca host
+
+        //Load conf.txt, check host, connect
         while (res == -1) {
             errno = 0;
             while (1) {
@@ -80,7 +80,7 @@ int main() {
                     sleep(2);
                 } else break;
             }
-            //Stampa di host e ip host
+            //Print host with ip
             printf("|gC| Connessione a -%s- su ", conf.host);
             char **addrs;
             addrs = inf -> h_addr_list;
@@ -90,13 +90,12 @@ int main() {
             }
             printf("\n");
 
-            //Indirizzo server
+            //Load server address
             addr.sin_family = AF_INET;
             addr.sin_port = htons(9734);
-            addr.sin_addr/*.s_addr*/ = /*inet_addr("127.0.0.1");*/
-                    *(struct in_addr*) *inf->h_addr_list;
+            addr.sin_addr = *(struct in_addr*) *inf->h_addr_list;
 
-            //Connessione
+            //Connect
             res = connect(c_sock, (struct sockaddr*) &addr, sizeof (addr));
             if (res == -1) {
                 perror("|gC| Conn");
@@ -108,30 +107,43 @@ int main() {
         write(c_sock, conf.nick, S_NICK);
         printf("|gC| Connesso con server!\n");
 
-        /*Creating fd for non blocking read
+        /*//Creating fd for non blocking read (Alt.)
         val = fcntl(c_sock, F_GETFL, 0);
         fcntl(c_sock, F_SETFL, val | O_NONBLOCK);*/
+
+        //Check server closed by thread
         pthread_create(&t1, NULL, thread_check, (void*) &c_sock);
+
         //Working
-        while (l) {
-            /* if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
-                 break;
-             }*/
-            c = 0;
+        while (connected) {
+            not_empty = 1;
+            /*//Check if server closed (Alt.)
+              read(c_sock,buf, sizeof(buf));
+               if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
+                  break;
+              }*/
             printf(">> ");
-            fgets(buf, S_BUFF, stdin);
-            if (strncmp(buf, "/", 1) == 0) {
-                if (check(buf) != -1) {
-                    c = 1;
-                }
+            if (fgets(buf, S_BUFF, stdin) == NULL) {
+                perror("|gC| fgets");
+                exit(EXIT_FAILURE);
             }
+            //Check if the command is empty
+            if (strncmp(buf, "/", 1) == 0) {
+                not_empty = check(buf);
+            }
+            //Check /end
             if (strncmp(buf, "/end", 4) == 0) {
                 r = 0;
                 break;
             }
-            //if(strncmp(buf, "/flup", 5) == 0){}
-            if (!is_empty(buf) && l == 1 && c == 1)
-                write(c_sock, buf, 1024);
+            //Write
+            if (!is_empty(buf) && connected == 1 && not_empty == 1) {
+                res = write(c_sock, buf, 1024);
+                if (res == -1) {
+                    perror("|gC| write");
+                    exit(EXIT_FAILURE);
+                }
+            }
             fflush(stdin);
         }
 
@@ -232,19 +244,19 @@ void*thread_check(void*c_sock) {
         read(*(int*) c_sock, buf, S_BUFF);
         if (strcmp(buf, "Chiusura server!\n") == 0) {
             printf("%s", buf);
-            l = 0;
+            connected = 0;
             buf[0] = '\0';
-            raise(SIGIOT);
+            raise(SIGINT);
             pthread_yield();
         }
     }
 }
 
-//void*thread_file(void*buf){}
-
 int check(char* chk) {
     char buf[S_BUFF];
     strcpy(buf, chk);
+
+    chk = strtok(buf, "\n");
     chk = strtok(buf, " ");
     chk = strtok(NULL, " ");
     if (chk == NULL) {
@@ -253,12 +265,5 @@ int check(char* chk) {
     if (is_empty(chk) == 1) {
         return -1;
     }
-    chk = strtok(NULL, "\n");
-    if (chk == NULL) {
-        return -1;
-    }
-    if (is_empty(chk) == 1) {
-        return -1;
-    }
-    return 0;
+    return 1; /*Not empty*/
 }
