@@ -1,5 +1,5 @@
 # gChat
-Cheap, buggy, chat program
+Chat program with room to improve
 
 The software is composed by three different files:
 
@@ -39,6 +39,10 @@ You will enter or create a private room, for now every one can access the room i
 /nick [new nick]
 
 You will be able to change your nick in the server, is only a temporary change, the default nick can be changed in the conf.txt file
+
+/end
+
+Close the client. You can also use Ctrl+C.
 
 ##2 - The Visualizer
 
