@@ -23,26 +23,26 @@ Conf.txt can be modified inside the folder of execution.
 ###
 You have some useful services that the client can ask to the server (don't write the []):
 
-/admn [password]
+`/admn [password]`
 
 This command will make you and administrator(if you know the password for the server),
 quite lame state for now but you will be able to execute the next command:
 
-/cast [something]
+`/cast [something]`
 
 You will broadcast everything inside the brakets, on every chatroom.
 
-/prch [room]
+`/prch [room]`
 
 You will enter or create a private room, for now every one can access the room if name is known.
 
-/nick [new nick]
+`/nick [new nick]`
 
 You will be able to change your nick in the server, is only a temporary change, the default nick can be changed in the conf.txt file
 
-/end
+`/end`
 
-Close the client. You can also use Ctrl+C.
+Close the client. You can also use `Ctrl+C`.
 
 ##2 - The Visualizer
 
