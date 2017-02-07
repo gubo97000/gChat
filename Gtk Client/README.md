@@ -11,4 +11,4 @@ The text-based will become obsolete in a really short time.
 
 ###Compile it!!
 
-Use `make` to compile! Remember, are used the gtk library.
+Use `make` to compile! Remember, you need the GTK libraries.
