@@ -160,11 +160,20 @@ void*visualizer() {
 
     while (1) {
         read(c_sock, rcv, S_BUFF);
-        gtk_text_buffer_insert(buffer, &iter, rcv, -1);
+        fflush(stdout);
+        //Check message type 
+        if (*AL == rcv[0]) {
+            gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
+                    "alert", NULL);
+        } else if (*SE == rcv[0]) {
+            gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
+                    "service", NULL);
+        } else {
+            gtk_text_buffer_insert(buffer, &iter, rcv, -1);
+        }
 
-        gtk_text_buffer_move_mark(buffer, mark, &iter);
-        /* Scroll the mark onscreen */
-        gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
+        //gtk_text_buffer_move_mark(buffer, mark, &iter);
+        //gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
 
         if (strcmp(rcv, "Chiusura server!\n") == 0) {
             buf[0] = '\0';

@@ -23,6 +23,8 @@
 #define S_BUFF 1024
 #define S_NICK 11
 #define S_HOST 20
+#define AL "-"
+#define SE "+"
 
 //Layout widget
 GtkWidget *window;

@@ -24,6 +24,9 @@ int interface(int argc, char *argv[]) {
     alert = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     mark = gtk_text_buffer_get_mark(buffer, "end");
 
+    //Set tag
+    gtk_text_buffer_create_tag(alert, "alert", "foreground", "red", NULL);
+    gtk_text_buffer_create_tag(alert, "service", "foreground", "green", NULL);
     //Setting for TextView
     gtk_text_view_set_editable((GtkTextView*) view, FALSE);
     gtk_text_view_set_cursor_visible((GtkTextView*) view, FALSE);
