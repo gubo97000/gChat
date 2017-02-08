@@ -18,12 +18,17 @@
 #define S_NICK 11
 #define S_HOST 20
 #define S_BUFF 1024
-#define N_CLNT 100
+#define N_CLNT 100 /*Max client number*/
+
+//Flag for type of message
+#define AL "-" /*Alert*/
+#define SE "+" /*Service*/
+#define RO "#" /*Tell your room*/
 
 typedef struct i {
     char nick[S_NICK]; /*Nickname*/
     int adm; /*Admin?*/
-} info;
+} user_t;
 
 typedef struct l {
     char adps[S_BUFF]; /*Admin password*/
@@ -31,15 +36,17 @@ typedef struct l {
 
 typedef struct c {
     char name[S_BUFF]; /*Private chat name*/
-    int occupied; /*If the private room was closed*/
+    int occupied; /*The struct is free*/
     fd_set set; /*fd_set for the chat room*/
     fd_set tset; /*Test set*/
 } chat_t;
 
-info clients[N_CLNT];
+//Static array
+user_t clients[N_CLNT];
 chat_t priv[N_CLNT];
 pthread_t thr[N_CLNT];
 
+//Global variable
 int ser_sock;
 conf_t conf;
 struct timeval timeout;
@@ -204,55 +211,64 @@ void command(int fd, char * buf, chat_t *pri) {
     int t, i = 0, r = 1;
     strtok(buf, "\n");
     cmd = strtok(buf, " ");
-    //Nick cmd
+
     if (strcmp(cmd, "/nick") == 0) {
         strcpy(old, clients[fd].nick);
         cmd = strtok(NULL, " ");
         if (strlen(cmd) > 11) {
-            write(fd, "Troppo grande il nick!\n", 30);
+            write(fd, AL "/nick: Troppo grande il nick!\n", 33);
             return;
         }
         strcpy(clients[fd].nick, cmd);
-        snprintf(buf, S_BUFF, "%s è ora |%s|\n", old, clients[fd].nick);
+        snprintf(buf, S_BUFF, SE"%s è ora |%s|\n", old, clients[fd].nick);
         toroom(buf, pri);
-    }
-    //Admin cmd
-    if (strcmp(cmd, "/admn") == 0) {
+    }//Nick cmd
+    else if (strcmp(cmd, "/admn") == 0) {
 
         cmd = strtok(NULL, " ");
         t = strcmp(cmd, conf.adps);
         if (t != 0) {
-            write(fd, "Non puoi diventare admin\n", 30);
+            write(fd, AL"Non puoi diventare admin\n", 30);
             return;
         }
         clients[fd].adm = 1;
-        snprintf(buf, S_BUFF, "|%s| è ora admin\n", clients[fd].nick);
+        snprintf(buf, S_BUFF, SE"|%s| è ora admin\n", clients[fd].nick);
         toroom(buf, pri);
-    }
-    //Broadcast cmd
-    if (strcmp(cmd, "/cast") == 0) {
+    }//Admin cmd
+    else if (strcmp(cmd, "/cast") == 0) {
         if (clients[fd].adm == 1) {
             cmd = strtok(NULL, "\n");
-            snprintf(sup, S_BUFF, "|%s| AVVISO: %s\n", clients[fd].nick, cmd);
+            snprintf(sup, S_BUFF, AL "|%s| AVVISO: %s\n", clients[fd].nick, cmd);
             toall(sup);
         }
-    }
-    //Private room cmd
-    if (strcmp(cmd, "/prch") == 0) {
+    }//Broadcast cmd
+    else if (strcmp(cmd, "/prch") == 0) {
         cmd = strtok(NULL, " ");
+        if (strlen(cmd) > 11) {
+            write(fd, AL "/prch: Room name too big!\n", 30);
+            return;
+        }
+        if (strcmp(cmd,pri->name) == 0) {
+            write(fd, AL "/prch: Already in this room!\n", 30);
+            return;
+        }
         //Check if room exist
         for (i = 0; i < N_CLNT; i++) {
             t = strcmp(cmd, priv[i].name);
             if (t == 0) {
                 fd_move(fd, pri, &priv[i]);
                 r = 0;
-                snprintf(buf, S_BUFF, "|%s| entrato in %s \n", clients[fd].nick, priv[i].name);
+                snprintf(buf, S_BUFF, RO "%s", priv[i].name);
+                write(fd, buf, S_BUFF);
+                snprintf(buf, S_BUFF, SE "|%s| left the room\n", clients[fd].nick /*pri->name*/);
                 toroom(buf, pri);
+                snprintf(buf, S_BUFF, SE"%s: %s joined!\n", priv[i].name, clients[fd].nick);
+                toroom(buf, &priv[i]);
                 break;
             }
         }
+        //Check free room and create
         if (r) {
-            //Check free room and create
             for (i = 0; i < N_CLNT; i++) {
                 if (priv[i].occupied == 0) {
                     priv[i].occupied = 1;
@@ -260,25 +276,31 @@ void command(int fd, char * buf, chat_t *pri) {
                     FD_ZERO(&priv[i].set);
                     fd_move(fd, pri, &priv[i]);
                     pthread_create(&thr[i], NULL, priv_room, (void*) &priv[i]);
-                    snprintf(buf, S_BUFF, "|%s| ha creato ed è in %s \n", clients[fd].nick, priv[i].name);
+                    snprintf(buf, S_BUFF, RO "%s", priv[i].name);
+                    write(fd, buf, S_BUFF);
+                    snprintf(buf, S_BUFF, SE "|%s| ha creato ed è in %s \n", clients[fd].nick, priv[i].name);
                     toroom(buf, pri);
+                    snprintf(buf, S_BUFF, SE"%s: %s joined!\n", priv[i].name, clients[fd].nick);
+                    toroom(buf, &priv[i]);
                     return;
                 }
             }
-            snprintf(buf, S_BUFF, "Tutto occupato!\n");
+            snprintf(buf, S_BUFF, AL "Tutto occupato!\n");
             toroom(buf, pri);
         }
 
-    } else {/*Wrong cmd*/
-        write(fd, "Comando non riconosciuto\n", 30);
+    }//Private room cmd
+    else {
+        write(fd, AL "No such command\n", 30);
         return;
-    }
+    }//Wrong cmd
 }
 
 void hand_c() {
     char buf[S_BUFF];
     strcpy(buf, "Chiusura server!\n");
     toall(buf);
+    sleep(2);
     signal(SIGINT, SIG_DFL);
     raise(SIGINT);
 }
