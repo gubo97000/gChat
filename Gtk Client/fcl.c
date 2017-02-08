@@ -168,6 +168,8 @@ void*visualizer() {
         } else if (*SE == rcv[0]) {
             gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
                     "service", NULL);
+        } else if (*RO == rcv[0]) {
+            gtk_label_set_text(GTK_LABEL(room), &rcv[1]);
         } else {
             gtk_text_buffer_insert(buffer, &iter, rcv, -1);
         }
@@ -238,6 +240,7 @@ void login() {
 
     write(c_sock, conf.nick, S_NICK);
     printf("|gC| Connesso con server!\n");
+    gtk_label_set_text(GTK_LABEL(nick), conf.nick);
 }
 
 //Interface response

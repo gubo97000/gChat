@@ -25,13 +25,15 @@
 #define S_HOST 20
 #define AL "-"
 #define SE "+"
+#define RO "#"
 
 //Layout widget
 GtkWidget *window;
-GtkWidget *hbox, *vbox, *scrolledwindow;
+GtkWidget *hbox_entry, *hbox_top_info, *vbox, *scrolledwindow;
 GtkWidget *message_entry;
 GtkWidget *ok_button;
 GtkWidget *view;
+GtkWidget *nick, *room;
 
 GtkTextBuffer *buffer, *alert;
 GtkTextMark *mark;
@@ -39,6 +41,7 @@ GtkTextTag *tag;
 GtkTextIter iter;
 
 //Struct for conf.txt
+
 typedef struct i {
     char host[S_HOST];
     char nick[S_NICK];

@@ -23,6 +23,13 @@ int interface(int argc, char *argv[]) {
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     alert = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     mark = gtk_text_buffer_get_mark(buffer, "end");
+    nick = gtk_label_new("Nick:");
+    room = gtk_label_new("Room:");
+
+    scrolledwindow = gtk_scrolled_window_new(NULL, NULL);
+    hbox_entry = gtk_hbox_new(FALSE, 10);
+    hbox_top_info = gtk_hbox_new(FALSE, 10);
+    vbox = gtk_vbox_new(FALSE, 10);
 
     //Set tag
     gtk_text_buffer_create_tag(alert, "alert", "foreground", "red", NULL);
@@ -32,15 +39,18 @@ int interface(int argc, char *argv[]) {
     gtk_text_view_set_cursor_visible((GtkTextView*) view, FALSE);
 
     //Layout
-    hbox = gtk_hbox_new(FALSE, 10);
-    vbox = gtk_vbox_new(FALSE, 10);
-    scrolledwindow = gtk_scrolled_window_new(NULL, NULL);
-    gtk_box_pack_start(GTK_BOX(hbox), message_entry, TRUE, TRUE, 8);
-    gtk_box_pack_start(GTK_BOX(hbox), ok_button, FALSE, FALSE, 1);
+    gtk_box_pack_start(GTK_BOX(hbox_top_info), nick, FALSE, FALSE, 0.5);
+    gtk_box_pack_start(GTK_BOX(hbox_top_info), room, FALSE, FALSE, 0.5);
 
     gtk_container_add(GTK_CONTAINER(scrolledwindow), view);
+
+    gtk_box_pack_start(GTK_BOX(hbox_entry), message_entry, TRUE, TRUE, 8);
+    gtk_box_pack_start(GTK_BOX(hbox_entry), ok_button, FALSE, FALSE, 1);
+
+    
+    gtk_box_pack_start(GTK_BOX(vbox), hbox_top_info, FALSE, TRUE, 0.5);
     gtk_box_pack_start(GTK_BOX(vbox), scrolledwindow, TRUE, TRUE, 8);
-    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 1);
+    gtk_box_pack_start(GTK_BOX(vbox), hbox_entry, FALSE, FALSE, 1);
 
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
