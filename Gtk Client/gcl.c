@@ -5,7 +5,6 @@
 void closeApp(GtkWidget *window, gpointer data) {
     gtk_main_quit();
 }
-GdkPixbuf *pixbuf;
 
 int interface(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
@@ -16,7 +15,7 @@ int interface(int argc, char *argv[]) {
     view = gtk_text_view_new();
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     alert = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
-    mark = gtk_text_buffer_get_mark(buffer, "end");
+    mark = gtk_text_buffer_get_mark(buffer, "scroll");
     nick = gtk_label_new("Nick:");
     room = gtk_label_new("Room:");
     pixbuf = gdk_pixbuf_new_from_file("icon.ico", NULL);
@@ -33,6 +32,8 @@ int interface(int argc, char *argv[]) {
     gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
     gtk_window_set_icon(GTK_WINDOW(window),pixbuf);
 
+    //Set iter
+    gtk_text_buffer_get_iter_at_offset(buffer, &iter, 0);
     //Set tag
     gtk_text_buffer_create_tag(alert, "alert", "foreground", "red", NULL);
     gtk_text_buffer_create_tag(alert, "service", "foreground", "green", NULL);
@@ -55,7 +56,7 @@ int interface(int argc, char *argv[]) {
 
     gtk_container_add(GTK_CONTAINER(window), vbox);
 
-    //Connect function
+    //Connect the function
     //Close window
     g_signal_connect(GTK_OBJECT(window), "destroy",
             GTK_SIGNAL_FUNC(closeApp), NULL);

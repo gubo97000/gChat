@@ -9,37 +9,6 @@ FILE*f_add;
 conf_t conf;
 pthread_t t1;
 
-int work() {
-    while (r) {
-        //printf(">> gChat Client <<\n");
-        connected = 1;
-
-        //Working
-        while (connected) {
-            not_empty = 1;
-            /*//Check if server closed (Alt.)
-              read(c_sock,buf, sizeof(buf));
-               if (strncmp(buf, "Chiusura server!\n", 16) == 0) {
-                  break;
-              }*/
-
-            //Write
-            if (!is_empty(buf) && connected == 1 && not_empty == 1) {
-                res = write(c_sock, buf, 1024);
-                if (res == -1) {
-                    perror("|gC| write");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            fflush(stdin);
-        }
-
-        printf("|gC| Disconnesso dal server\n");
-    }
-    close(c_sock);
-    pthread_cancel(t1);
-}
-
 int fconf_init() {
     FILE*f_add;
     char buf[S_HOST], nick[S_NICK];
@@ -116,20 +85,6 @@ int sconf_up(FILE*f_add, conf_t*conf) {
     rewind(f_add);
 }
 
-void*thread_check(void*c_sock) {
-    char buf[S_BUFF];
-    while (1) {
-        read(*(int*) c_sock, buf, S_BUFF);
-        if (strcmp(buf, "Chiusura server!\n") == 0) {
-            printf("%s", buf);
-            connected = 0;
-            buf[0] = '\0';
-            raise(SIGINT);
-            pthread_yield();
-        }
-    }
-}
-
 int genuine(const char*buf) {
     if ('/' == *buf) {
         buf += 5;
@@ -151,13 +106,6 @@ int is_empty(const char *s) {
 }
 
 void*visualizer() {
-    GtkTextMark *mark;
-    mark = gtk_text_buffer_get_mark(buffer, "scroll");
-
-    //get iter
-    gtk_text_buffer_get_iter_at_offset(buffer, &iter, 0);
-
-
     while (1) {
         read(c_sock, rcv, S_BUFF);
         fflush(stdout);
@@ -165,24 +113,28 @@ void*visualizer() {
         if (*AL == rcv[0]) {
             gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
                     "alert", NULL);
-        } else if (*SE == rcv[0]) {
+        }//Alert format
+        else if (*SE == rcv[0]) {
             gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
                     "service", NULL);
-        } else if (*RO == rcv[0]) {
+        }//Service format
+        else if (*RO == rcv[0]) {
             gtk_label_set_text(GTK_LABEL(room), &rcv[1]);
-        } else if (*NI == rcv[0]) {
+        }//Room_name_change
+        else if (*NI == rcv[0]) {
             gtk_label_set_text(GTK_LABEL(nick), &rcv[1]);
-        } else {
+        }//Nick_name_change
+        else {
             gtk_text_buffer_insert(buffer, &iter, rcv, -1);
-        }
+        }//Text format
 
-        //gtk_text_buffer_move_mark(buffer, mark, &iter);
-        //gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
+        gtk_text_buffer_move_mark(buffer, mark, &iter);
+        gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
 
         if (strcmp(rcv, "Chiusura server!\n") == 0) {
             buf[0] = '\0';
             raise(SIGINT);
-        }
+        }//Server chiuso
     }
 }
 

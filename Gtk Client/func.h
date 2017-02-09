@@ -36,6 +36,7 @@ GtkWidget *ok_button;
 GtkWidget *view;
 GtkWidget *nick, *room;
 
+GdkPixbuf *pixbuf;
 GtkTextBuffer *buffer, *alert;
 GtkTextMark *mark;
 GtkTextTag *tag;
@@ -60,8 +61,6 @@ int genuine(const char*buf);
 
 //Check if a command is empty
 int check(char buf[S_BUFF]);
-
-int work();
 
 //Visualizer function for a thread 
 void*visualizer();
