@@ -32,9 +32,13 @@ quite lame state for now but you will be able to execute the next command:
 
 You will broadcast everything inside the brakets, on every chatroom.
 
-`/prch [room]`
+`/prch [room] [password]`
 
-You will enter or create a private room, for now every one can access the room if name is known.
+You will create or enter (if already exist) a private room; the password field is optional.
+
+`/prrm [put something]`
+
+You will destroy the private room and send every user back to "plaza". You need to be an admin.
 
 `/nick [new nick]`
 
