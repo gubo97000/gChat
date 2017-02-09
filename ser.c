@@ -24,6 +24,7 @@
 #define AL "-" /*Alert*/
 #define SE "+" /*Service*/
 #define RO "#" /*Tell your room*/
+#define NI "@" /*Tell your nick*/
 
 typedef struct i {
     char nick[S_NICK]; /*Nickname*/
@@ -36,6 +37,7 @@ typedef struct l {
 
 typedef struct c {
     char name[S_BUFF]; /*Private chat name*/
+    char pass[S_BUFF]; /*Private chat password*/
     int occupied; /*The struct is free*/
     fd_set set; /*fd_set for the chat room*/
     fd_set tset; /*Test set*/
@@ -220,11 +222,12 @@ void command(int fd, char * buf, chat_t *pri) {
             return;
         }
         strcpy(clients[fd].nick, cmd);
+        snprintf(buf, S_BUFF, NI"%s", clients[fd].nick);
+        write(fd, buf, 30);
         snprintf(buf, S_BUFF, SE"%s è ora |%s|\n", old, clients[fd].nick);
         toroom(buf, pri);
     }//Nick cmd
     else if (strcmp(cmd, "/admn") == 0) {
-
         cmd = strtok(NULL, " ");
         t = strcmp(cmd, conf.adps);
         if (t != 0) {
@@ -240,31 +243,49 @@ void command(int fd, char * buf, chat_t *pri) {
             cmd = strtok(NULL, "\n");
             snprintf(sup, S_BUFF, AL "|%s| AVVISO: %s\n", clients[fd].nick, cmd);
             toall(sup);
+        } else {
+            write(fd, AL "/cast: No admin power!\n", 33);
         }
     }//Broadcast cmd
     else if (strcmp(cmd, "/prch") == 0) {
         cmd = strtok(NULL, " ");
+        //Check if you want Hall
+        if (strcmp(cmd, priv[0].name) == 0) {
+            write(fd, AL "/prch: The Hall is the Hall!\n", 50);
+            return;
+        }
+        //Check length
         if (strlen(cmd) > 11) {
             write(fd, AL "/prch: Room name too big!\n", 30);
             return;
         }
-        if (strcmp(cmd,pri->name) == 0) {
+        //Check if already in room
+        if (strcmp(cmd, pri->name) == 0) {
             write(fd, AL "/prch: Already in this room!\n", 30);
             return;
         }
         //Check if room exist
         for (i = 0; i < N_CLNT; i++) {
             t = strcmp(cmd, priv[i].name);
+            //Room exist
             if (t == 0) {
-                fd_move(fd, pri, &priv[i]);
-                r = 0;
-                snprintf(buf, S_BUFF, RO "%s", priv[i].name);
-                write(fd, buf, S_BUFF);
-                snprintf(buf, S_BUFF, SE "|%s| left the room\n", clients[fd].nick /*pri->name*/);
-                toroom(buf, pri);
-                snprintf(buf, S_BUFF, SE"%s: %s joined!\n", priv[i].name, clients[fd].nick);
-                toroom(buf, &priv[i]);
-                break;
+                //Pass check
+                cmd = strtok(NULL, " ");
+                if (cmd == NULL)cmd = "0";
+                if (strcmp(cmd, priv[i].pass) == 0) {
+                    fd_move(fd, pri, &priv[i]);
+                    r = 0;
+                    snprintf(buf, S_BUFF, RO "%s", priv[i].name);
+                    write(fd, buf, S_BUFF);
+                    snprintf(buf, S_BUFF, SE "|%s| left the room\n", clients[fd].nick /*pri->name*/);
+                    toroom(buf, pri);
+                    snprintf(buf, S_BUFF, SE"%s: %s joined!\n", priv[i].name, clients[fd].nick);
+                    toroom(buf, &priv[i]);
+                    break;
+                } else {
+                    write(fd, AL "/prch: Wrong password\n", 30);
+                    return;
+                }
             }
         }
         //Check free room and create
@@ -273,7 +294,14 @@ void command(int fd, char * buf, chat_t *pri) {
                 if (priv[i].occupied == 0) {
                     priv[i].occupied = 1;
                     strcpy(priv[i].name, cmd);
+                    cmd = strtok(NULL, " ");
+                    //Public room
+                    if (cmd == NULL) {
+                        strcpy(priv[i].pass, "0");
+                    } else strcpy(priv[i].pass, cmd);
                     FD_ZERO(&priv[i].set);
+                    FD_ZERO(&priv[i].tset);
+
                     fd_move(fd, pri, &priv[i]);
                     pthread_create(&thr[i], NULL, priv_room, (void*) &priv[i]);
                     snprintf(buf, S_BUFF, RO "%s", priv[i].name);
@@ -290,6 +318,36 @@ void command(int fd, char * buf, chat_t *pri) {
         }
 
     }//Private room cmd
+    else if (strcmp(cmd, "/prrm") == 0) {
+        //Plaza?
+        if (strcmp(pri->name, "plaza") == 0) {
+            write(fd, AL "/prrm: Can't kill the plaza!\n", 33);
+            return;
+        }
+        //Admin?
+        if (clients[fd].adm == 0) {
+            write(fd, AL "/prrm: No admin power!\n", 33);
+            return;
+        }
+        /*Right pass?
+        cmd = strtok(NULL, " ");
+        if (cmd != NULL || !strcmp(cmd, pri->pass)) {
+            write(fd, AL "/prrm: No permission!\n", 30);
+            return;
+        }*/
+        //All to plaza
+        for (i = 4; i < FD_SETSIZE; i++) {
+            t = FD_ISSET(i, &pri->set);
+            if (t != 0) {
+                strcpy(buf, "/prch plaza\n");
+                command(i, buf, pri);
+            }
+        }
+        //Remove room
+        pri->occupied = 0;
+        //Thread suicide
+        pthread_exit("Room closed");
+    }//Private remove cmd
     else {
         write(fd, AL "No such command\n", 30);
         return;
@@ -320,7 +378,7 @@ int fconf_init() {
     exit(EXIT_SUCCESS);
 }
 
-int sconf_up(FILE*f_add, conf_t*conf) {
+int sconf_up(FILE*f_add, conf_t * conf) {
     int i = 0, check = 0;
     char *pos, *res;
     char buf[S_BUFF];
@@ -347,14 +405,14 @@ int sconf_up(FILE*f_add, conf_t*conf) {
     }
 }
 
-int fd_move(int fd, chat_t* src, chat_t* dst) {
+int fd_move(int fd, chat_t* src, chat_t * dst) {
     FD_SET(fd, &(dst->set));
     FD_SET(fd, &(dst->tset));
     FD_CLR(fd, &(src->set));
     FD_CLR(fd, &(src->tset));
 }
 
-int set_vis(int fd, chat_t* pri) {
+int set_vis(int fd, chat_t * pri) {
     char*pos;
     char buf[S_BUFF];
     int t = 0, i = 0;
