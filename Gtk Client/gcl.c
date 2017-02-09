@@ -5,16 +5,10 @@
 void closeApp(GtkWidget *window, gpointer data) {
     gtk_main_quit();
 }
+GdkPixbuf *pixbuf;
 
 int interface(int argc, char *argv[]) {
-
     gtk_init(&argc, &argv);
-
-    //Window
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Gtk gClient");
-    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
 
     //Initialize widget
     message_entry = gtk_entry_new();
@@ -25,11 +19,19 @@ int interface(int argc, char *argv[]) {
     mark = gtk_text_buffer_get_mark(buffer, "end");
     nick = gtk_label_new("Nick:");
     room = gtk_label_new("Room:");
+    pixbuf = gdk_pixbuf_new_from_file("icon.ico", NULL);
 
     scrolledwindow = gtk_scrolled_window_new(NULL, NULL);
     hbox_entry = gtk_hbox_new(FALSE, 10);
     hbox_top_info = gtk_hbox_new(FALSE, 10);
     vbox = gtk_vbox_new(FALSE, 10);
+
+    //Window
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "Gtk gClient");
+    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+    gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
+    gtk_window_set_icon(GTK_WINDOW(window),pixbuf);
 
     //Set tag
     gtk_text_buffer_create_tag(alert, "alert", "foreground", "red", NULL);
@@ -47,7 +49,6 @@ int interface(int argc, char *argv[]) {
     gtk_box_pack_start(GTK_BOX(hbox_entry), message_entry, TRUE, TRUE, 8);
     gtk_box_pack_start(GTK_BOX(hbox_entry), ok_button, FALSE, FALSE, 1);
 
-    
     gtk_box_pack_start(GTK_BOX(vbox), hbox_top_info, FALSE, TRUE, 0.5);
     gtk_box_pack_start(GTK_BOX(vbox), scrolledwindow, TRUE, TRUE, 8);
     gtk_box_pack_start(GTK_BOX(vbox), hbox_entry, FALSE, FALSE, 1);

@@ -26,6 +26,7 @@
 #define AL "-"
 #define SE "+"
 #define RO "#"
+#define NI "@"
 
 //Layout widget
 GtkWidget *window;

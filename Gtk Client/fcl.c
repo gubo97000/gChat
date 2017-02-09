@@ -170,6 +170,8 @@ void*visualizer() {
                     "service", NULL);
         } else if (*RO == rcv[0]) {
             gtk_label_set_text(GTK_LABEL(room), &rcv[1]);
+        } else if (*NI == rcv[0]) {
+            gtk_label_set_text(GTK_LABEL(nick), &rcv[1]);
         } else {
             gtk_text_buffer_insert(buffer, &iter, rcv, -1);
         }
