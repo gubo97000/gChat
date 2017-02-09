@@ -41,6 +41,11 @@ if entered the room will be protected by password, set this entry to 0 is the sa
 
 You will destroy the private room and send every user back to "plaza". You need to be an admin.
 
+`/pass [something/room_name]`
+
+Normal user: will send back the password of the current room (NEED to put something to work).
+Admin user: will send back the password for the room entered.
+
 `/nick [new nick]`
 
 You will be able to change your nick in the server, is only a temporary change, the default nick can be changed in the conf.txt file
