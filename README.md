@@ -32,9 +32,10 @@ quite lame state for now but you will be able to execute the next command:
 
 You will broadcast everything inside the brakets, on every chatroom.
 
-`/prch [room] [password]`
+`/prch [room] [room_password]`
 
-You will create or enter (if already exist) a private room; the password field is optional.
+You will create or enter (if already exist) a private room; the password field is optional,
+if entered the room will be protected by password.
 
 `/prrm [put something]`
 
