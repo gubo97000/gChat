@@ -35,7 +35,7 @@ You will broadcast everything inside the brakets, on every chatroom.
 `/prch [room] [room_password]`
 
 You will create or enter (if already exist) a private room; the password field is optional,
-if entered the room will be protected by password.
+if entered the room will be protected by password, set this entry to 0 is the same of leaving empty.
 
 `/prrm [put something]`
 
