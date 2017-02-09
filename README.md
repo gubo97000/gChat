@@ -44,6 +44,7 @@ You will destroy the private room and send every user back to "plaza". You need 
 `/pass [something/room_name]`
 
 Normal user: will send back the password of the current room (NEED to put something to work).
+
 Admin user: will send back the password for the room entered.
 
 `/nick [new nick]`
