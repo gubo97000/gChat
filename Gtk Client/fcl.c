@@ -106,6 +106,7 @@ int is_empty(const char *s) {
 }
 
 void*visualizer() {
+   mark = gtk_text_buffer_get_mark((GtkTextBuffer*) buffer, "scroll");
     while (1) {
         read(c_sock, rcv, S_BUFF);
         fflush(stdout);
@@ -127,9 +128,6 @@ void*visualizer() {
         else {
             gtk_text_buffer_insert(buffer, &iter, rcv, -1);
         }//Text format
-
-        gtk_text_buffer_move_mark(buffer, mark, &iter);
-        gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
 
         if (strcmp(rcv, "Chiusura server!\n") == 0) {
             buf[0] = '\0';
@@ -221,27 +219,9 @@ void press_enter(GtkWidget *message_entry, gpointer data) {
     gtk_entry_set_text(GTK_ENTRY(message_entry), "");
 }
 
-static gboolean scroll_to_bottom(GtkTextView *textview, GtkTextIter iter) {
-    //    GtkTextIter iter;
-    GtkTextMark *mark;
-
-    /* Get end iterator */
-    gtk_text_buffer_get_end_iter(buffer, &iter);
-
-    /* Move the iterator to the beginning of line, so we don't scroll 
-     * in horizontal direction 
-     */
-    gtk_text_iter_set_line_offset(&iter, 0);
-
-    /* and place the mark at iter. the mark will stay there after we
-     * insert some text at the end because it has right gravity.
-     */
-    mark = gtk_text_buffer_get_mark(buffer, "scroll");
-    gtk_text_buffer_move_mark(buffer, mark, &iter);
-
-    /* Scroll the mark onscreen.
-     */
-    gtk_text_view_scroll_mark_onscreen(textview, mark);
-
-    return TRUE;
+void auto_scroll(GtkWidget *buffer, gpointer data) {
+    //gtk_text_iter_set_line_offset(&iter, 0);
+    
+    gtk_text_buffer_move_mark((GtkTextBuffer*) buffer, mark, &iter);
+    gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
 }

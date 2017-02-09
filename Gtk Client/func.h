@@ -78,5 +78,7 @@ void button_clicked(GtkWidget *button, gpointer data);
 int interface(int argc, char *argv[]);
 //Function for /n
 void press_enter(GtkWidget *message_entry, gpointer data);
+//Aut scroll
+void auto_scroll(GtkWidget *buffer, gpointer data);
 
 static gboolean scroll_to_bottom(GtkTextView *textview, GtkTextIter iter);

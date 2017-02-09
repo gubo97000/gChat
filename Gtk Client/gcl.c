@@ -15,7 +15,6 @@ int interface(int argc, char *argv[]) {
     view = gtk_text_view_new();
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     alert = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
-    mark = gtk_text_buffer_get_mark(buffer, "scroll");
     nick = gtk_label_new("Nick:");
     room = gtk_label_new("Room:");
     pixbuf = gdk_pixbuf_new_from_file("icon.ico", NULL);
@@ -30,7 +29,7 @@ int interface(int argc, char *argv[]) {
     gtk_window_set_title(GTK_WINDOW(window), "Gtk gClient");
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     gtk_window_set_default_size(GTK_WINDOW(window), 300, 200);
-    gtk_window_set_icon(GTK_WINDOW(window),pixbuf);
+    gtk_window_set_icon(GTK_WINDOW(window), pixbuf);
 
     //Set iter
     gtk_text_buffer_get_iter_at_offset(buffer, &iter, 0);
@@ -40,6 +39,11 @@ int interface(int argc, char *argv[]) {
     //Setting for TextView
     gtk_text_view_set_editable((GtkTextView*) view, FALSE);
     gtk_text_view_set_cursor_visible((GtkTextView*) view, FALSE);
+    //Set Mark
+    mark = gtk_text_buffer_create_mark(buffer, "scroll", &iter, TRUE);
+
+
+   // g_timeout_add(100, (GSourceFunc) auto_scroll, &iter);
 
     //Layout
     gtk_box_pack_start(GTK_BOX(hbox_top_info), nick, FALSE, FALSE, 0.5);
@@ -66,6 +70,9 @@ int interface(int argc, char *argv[]) {
     //Enter on text entry
     g_signal_connect(GTK_OBJECT(message_entry), "activate",
             GTK_SIGNAL_FUNC(press_enter), message_entry);
+    //Enter on text entry
+    g_signal_connect(buffer, "changed",
+            GTK_SIGNAL_FUNC(auto_scroll), &iter);
 
     //Show
     gtk_widget_show_all(window);
