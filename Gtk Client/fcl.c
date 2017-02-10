@@ -106,10 +106,9 @@ int is_empty(const char *s) {
 }
 
 void*visualizer() {
-   mark = gtk_text_buffer_get_mark((GtkTextBuffer*) buffer, "scroll");
+    //mark = gtk_text_buffer_get_mark((GtkTextBuffer*) buffer, "scroll");
     while (1) {
         read(c_sock, rcv, S_BUFF);
-        fflush(stdout);
         //Check message type 
         if (*AL == rcv[0]) {
             gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, &rcv[1], -1,
@@ -133,6 +132,9 @@ void*visualizer() {
             buf[0] = '\0';
             raise(SIGINT);
         }//Server chiuso
+
+        //gtk_text_buffer_move_mark(buffer, mark, &iter);
+        //gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
     }
 }
 
@@ -209,6 +211,8 @@ void press_enter(GtkWidget *message_entry, gpointer data) {
     snprintf(buf, S_BUFF, "%s\n", output);
     //Write
     if (genuine(buf)) {
+        printf("%s", buf);
+        fflush(stdout);
         res = write(c_sock, buf, 1024);
         if (res == -1) {
             perror("|gC| write");
@@ -219,9 +223,3 @@ void press_enter(GtkWidget *message_entry, gpointer data) {
     gtk_entry_set_text(GTK_ENTRY(message_entry), "");
 }
 
-void auto_scroll(GtkWidget *buffer, gpointer data) {
-    //gtk_text_iter_set_line_offset(&iter, 0);
-    
-    gtk_text_buffer_move_mark((GtkTextBuffer*) buffer, mark, &iter);
-    gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
-}

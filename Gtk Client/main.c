@@ -1,7 +1,6 @@
 #include "func.h"
 
 int main(void) {
-   
     pthread_t t_vis;
 
     //Start interface
