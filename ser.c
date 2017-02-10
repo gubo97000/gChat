@@ -73,6 +73,11 @@ void*priv_room(void*room);
 int set_vis(int fd, chat_t* pri);
 
 int main() {
+     //Gestione segnale SIGINT
+    signal(SIGINT, hand_c);
+    //Gestione segnale SIGINT
+    signal(SIGPIPE, SIG_IGN);
+    
     int w_sock, addr_len, res, fd = 0, nread;
     struct sockaddr_in addr, w_addr;
     char buf[1024], f_buf[1024];
@@ -118,9 +123,6 @@ int main() {
         perror("|gP| Listen");
         exit(EXIT_FAILURE);
     }
-
-    //Gestione segnale SIGINT
-    signal(SIGINT, hand_c);
 
     //Work
     while (1) {
@@ -348,6 +350,25 @@ void command(int fd, char * buf, chat_t *pri) {
         //Thread suicide
         pthread_exit("Room closed");
     }//Private remove cmd
+    else if (strcmp(cmd, "/pass") == 0) {
+        if (clients[fd].adm == 1) {
+            cmd = strtok(NULL, " ");
+            for (i = 0; i < N_CLNT; i++) {
+                t = strcmp(cmd, priv[i].name);
+                if (t == 0) {
+                    snprintf(sup, S_BUFF, AL "/pass: %s => %s\n",
+                            priv[i].name, priv[i].pass);
+                    write(fd, sup, S_BUFF);
+                }
+            }
+            return;
+        } else {
+            snprintf(sup, S_BUFF, AL "/pass: %s => %s\n",
+                    pri->name, pri->pass);
+            write(fd, sup, S_BUFF);
+            return;
+        }
+    }//Show room password cmd
     else {
         write(fd, AL "No such command\n", 30);
         return;
@@ -407,9 +428,9 @@ int sconf_up(FILE*f_add, conf_t * conf) {
 
 int fd_move(int fd, chat_t* src, chat_t * dst) {
     FD_SET(fd, &(dst->set));
-    FD_SET(fd, &(dst->tset));
+    // FD_SET(fd, &(dst->tset));
     FD_CLR(fd, &(src->set));
-    FD_CLR(fd, &(src->tset));
+    //  FD_CLR(fd, &(src->tset));
 }
 
 int set_vis(int fd, chat_t * pri) {
@@ -462,12 +483,16 @@ void*priv_room(void*room) {
             if (FD_ISSET(fd, &(pri->tset))) {
 
                 /* Client action */
-                ioctl(fd, FIONREAD, &nread);
+                res = ioctl(fd, FIONREAD, &nread);
+                if (res == -1) {
+                    perror("ioctl");
+                    exit(EXIT_FAILURE);
+                }
 
                 /* Rimozione client  */
                 if (nread == 0) {
                     if ((strcmp(clients[fd].nick, "Visualizer")) != 0) {
-                        snprintf(buf, S_BUFF, "|%s| è uscito\n", clients[fd].nick);
+                        snprintf(buf, S_BUFF, SE"|%s| quit\n", clients[fd].nick);
                         toroom(buf, pri);
                     }
                     close(fd);
@@ -486,7 +511,8 @@ void*priv_room(void*room) {
                     }
                     buf[0] = '\0';
                     f_buf[0] = '\0';
-
+                    usleep(200000);
+                    //break;
                 }
             }
         }
