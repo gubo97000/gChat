@@ -133,8 +133,8 @@ void*visualizer() {
             raise(SIGINT);
         }//Server chiuso
 
-        //gtk_text_buffer_move_mark(buffer, mark, &iter);
-        //gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
+        // gtk_text_buffer_move_mark(buffer, mark, &iter);
+        // gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
     }
 }
 
@@ -164,7 +164,7 @@ void login() {
             //Ricerca host by name
             inf = gethostbyname(conf.host);
             if (inf == NULL) {
-                printf("Non trovo l'host!\n");
+                printf("|gC| Non trovo l'host!\n");
                 sleep(2);
             } else break;
         }
@@ -200,9 +200,6 @@ void login() {
 //Interface response
 
 void button_clicked(GtkWidget *button, gpointer data) {
-    //const char *output = gtk_entry_get_text(GTK_ENTRY((GtkWidget *) data));
-    printf("click!");
-    fflush(stdout);
     gtk_signal_emit_by_name(GTK_OBJECT(message_entry), "activate");
 }
 
@@ -211,8 +208,6 @@ void press_enter(GtkWidget *message_entry, gpointer data) {
     snprintf(buf, S_BUFF, "%s\n", output);
     //Write
     if (genuine(buf)) {
-        printf("%s", buf);
-        fflush(stdout);
         res = write(c_sock, buf, 1024);
         if (res == -1) {
             perror("|gC| write");

@@ -32,7 +32,7 @@
 GtkWidget *window;
 GtkWidget *hbox_entry, *hbox_top_info, *vbox, *scrolledwindow;
 GtkWidget *message_entry;
-GtkWidget *ok_button;
+GtkWidget *ok_button, *scroll_button;
 GtkWidget *view;
 GtkWidget *nick, *room;
 
@@ -41,6 +41,8 @@ GtkTextBuffer *buffer, *alert;
 GtkTextMark *mark;
 GtkTextTag *tag;
 GtkTextIter iter;
+
+gulong f_id;
 
 //Struct for conf.txt
 
@@ -78,7 +80,7 @@ void button_clicked(GtkWidget *button, gpointer data);
 int interface(int argc, char *argv[]);
 //Function for /n
 void press_enter(GtkWidget *message_entry, gpointer data);
-//Aut scroll
+//Auto scroll
 void auto_scroll(GtkWidget *buffer, gpointer data);
 
-static gboolean scroll_to_bottom(GtkTextView *textview, GtkTextIter iter);
+void scroll_on(GtkWidget *scroll_button, gpointer data);

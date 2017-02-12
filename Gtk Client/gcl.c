@@ -12,11 +12,12 @@ int interface(int argc, char *argv[]) {
     //Initialize widget
     message_entry = gtk_entry_new();
     ok_button = gtk_button_new_with_label("Send");
+    scroll_button = gtk_check_button_new_with_label("Auto scroll (Sperimental)");
     view = gtk_text_view_new();
     buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
     nick = gtk_label_new("Nick:");
     room = gtk_label_new("Room:");
-    pixbuf = gdk_pixbuf_new_from_file("icon.ico", NULL);
+    pixbuf = gdk_pixbuf_new_from_file("prova.png", NULL);
 
     scrolledwindow = gtk_scrolled_window_new(NULL, NULL);
     hbox_entry = gtk_hbox_new(FALSE, 10);
@@ -44,6 +45,7 @@ int interface(int argc, char *argv[]) {
     //Layout
     gtk_box_pack_start(GTK_BOX(hbox_top_info), nick, FALSE, FALSE, 0.5);
     gtk_box_pack_start(GTK_BOX(hbox_top_info), room, FALSE, FALSE, 0.5);
+    gtk_box_pack_start(GTK_BOX(hbox_top_info), scroll_button, FALSE, FALSE, 0.5);
 
     gtk_container_add(GTK_CONTAINER(scrolledwindow), view);
 
@@ -67,7 +69,15 @@ int interface(int argc, char *argv[]) {
     g_signal_connect(GTK_OBJECT(message_entry), "activate",
             GTK_SIGNAL_FUNC(press_enter), message_entry);
     //autoscroll
-    //g_signal_connect(buffer, "changed",GTK_SIGNAL_FUNC(auto_scroll), NULL);
+    f_id = g_signal_connect(buffer, "changed",
+            GTK_SIGNAL_FUNC(auto_scroll), NULL);
+    g_signal_handler_block(buffer, f_id);
+
+    //Button for autoscroll
+    g_signal_connect(GTK_OBJECT(scroll_button), "toggled",
+            GTK_SIGNAL_FUNC(scroll_on), NULL);
+
+
 
     //Show
     gtk_widget_show_all(window);
@@ -81,3 +91,13 @@ void auto_scroll(GtkWidget *buffer, gpointer data) {
     gtk_text_view_scroll_mark_onscreen((GtkTextView*) view, mark);
 }
 
+void scroll_on(GtkWidget *scroll_button, gpointer data) {
+    static int i = TRUE;
+    if (i) {
+        g_signal_handler_unblock(buffer, f_id);
+        i = !i;
+    } else {
+        g_signal_handler_block(buffer, f_id);
+        i = !i;
+    }
+}
